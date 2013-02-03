@@ -1,0 +1,10 @@
+prefix="@CMAKE_INSTALL_PREFIX@"
+exec_prefix="${prefix}"
+includedir="${prefix}/include"
+libdir="${exec_prefix}/lib"
+
+Name: @PROJECT_NAME@
+Description: A cross-platform C++ library that provides the simplest support of INI files.
+Version: @FULL_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -l@PROJECT_NAME@
