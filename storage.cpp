@@ -238,7 +238,7 @@ public:
                     current_section[current_section.length() - 1] |= char_to_hex(input);
                     if (!current_section[current_section.length() - 1])
                         if (callback)
-                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_SECTION_NAME, cur_char - 2, cur_line, cur_pos - 2);
+                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_SECTION_NAME, cur_pos - 2, cur_line, cur_char - 2);
                     context = CONTEXT__SECTION_NAME;
                     break;
 
@@ -291,6 +291,7 @@ public:
                 case CHAR_CLASS__HEXDIGIT:
                 case CHAR_CLASS__LETTERS:
                 case CHAR_CLASS__MINUS:
+                case CHAR_CLASS__BACKSLASH:
                     current_key += input;
                     break;
 
@@ -299,6 +300,8 @@ public:
                     break;
 
                 case CHAR_CLASS__EQUAL:
+                    current_values.clear();
+                    current_value.clear();
                     context = CONTEXT__EQUAL;
                     break;
 
@@ -327,7 +330,7 @@ public:
                     current_key[current_key.length() - 1] |= char_to_hex(input);
                     if (!current_key[current_key.length() - 1])
                         if (callback)
-                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_KEY_NAME, cur_char - 2, cur_line, cur_pos - 2);
+                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_KEY_NAME, cur_pos - 2, cur_line, cur_char - 2);
                     context = CONTEXT__KEY_NAME;
                     break;
 
@@ -366,12 +369,33 @@ public:
                 case CHAR_CLASS__SPACE:
                     break;
 
+                case CHAR_CLASS__SEMICOLON:
+                    context = CONTEXT__COMMENT;
+                    break;
+
                 case CHAR_CLASS__QUOTE:
                     context = CONTEXT__VALUE_QUOTED;
                     break;
 
+                case CHAR_CLASS__BACKSLASH:
+                    last_context = CONTEXT__VALUE_START;
+                    context = CONTEXT__VALUE_ESCAPED;
+                    break;
+
+                case CHAR_CLASS__COMMA:
+                    current_values += trim(current_value);
+                    current_value.clear();
+                    context = CONTEXT__EQUAL;
+                    break;
+
                 default:
-                    fail = true;
+                    if ((input >= 0x20) && (input < 0x7f))
+                    {
+                        current_value += input;
+                        context = CONTEXT__VALUE_START;
+                    }
+                    else
+                        fail = true;
                 }
                 break;
 
@@ -439,48 +463,48 @@ public:
                 {
                 case '0':
                     current_value += '\0';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'a':
                     current_value += '\a';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'b':
                     current_value += '\b';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'f':
                     current_value += '\f';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'n':
                     current_value += '\n';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'r':
                     current_value += '\r';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 't':
                     current_value += '\t';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'v':
                     current_value += '\v';
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case '"':
                 case '\\':
                     current_value += input;
-                    context = CONTEXT__VALUE_QUOTED;
+                    context = last_context;
                     break;
 
                 case 'x':
@@ -547,7 +571,7 @@ public:
             if (fail)
             {
                 if (callback)
-                    callback->error(cur_char, cur_line, cur_pos);
+                    callback->error(cur_pos, cur_line, cur_char);
                 return false;
             }
 
@@ -577,7 +601,7 @@ public:
         }
 
         if (callback)
-            callback->error(cur_char, cur_line, cur_pos);
+            callback->error(cur_pos, cur_line, cur_char);
 
         return false;
     }
@@ -604,9 +628,9 @@ public:
         m_content.clear();
     }
 
-    std::set<std::string> get_all_sections() const
+    Storage::Strings get_all_sections() const
     {
-        std::set<std::string> result;
+        Storage::Strings result;
 
         Sections::const_iterator SM = m_content.end();
         for (Sections::const_iterator SI = m_content.begin(); SI != SM; ++SI)
@@ -625,9 +649,9 @@ public:
         return m_content.erase(section);
     }
 
-    std::set<std::string> get_all_keys(const std::string &section) const
+    Storage::Strings get_all_keys(const std::string &section) const
     {
-        std::set<std::string> result;
+        Storage::Strings result;
 
         Sections::const_iterator SI = m_content.find(section);
         if (SI != m_content.end())
@@ -672,7 +696,7 @@ public:
         return std::make_pair(result.first, static_cast<std::string>(result.second[0]));
     }
 
-    std::pair<bool, Storage::Values> get_values(const std::string &section, const std::string &key, const Storage::Values &default_value) const
+    std::pair<bool, Storage::Values> get_values(const std::string &section, const std::string &key, const Storage::Values &default_values) const
     {
         Sections::const_iterator SI = m_content.find(section);
         if (SI != m_content.end())
@@ -682,7 +706,7 @@ public:
                 return std::make_pair(true, KI->second);
         }
 
-        return std::make_pair(false, default_value);
+        return std::make_pair(false, default_values);
     }
 
     void set_string(const std::string &section, const std::string &key, const std::string &value)
@@ -693,9 +717,9 @@ public:
         set_values(section, key, values);
     }
 
-    void set_values(const std::string &section, const std::string &key, const Storage::Values &value)
+    void set_values(const std::string &section, const std::string &key, const Storage::Values &values)
     {
-        if (value.empty())
+        if (values.empty())
         {
             Storage::Values empty;
             empty.push_back(std::string());
@@ -703,7 +727,7 @@ public:
             m_content[section][key] = empty;
         }
         else
-            m_content[section][key] = value;
+            m_content[section][key] = values;
     }
 
     bool remove_key(const std::string &section, const std::string &key)
@@ -729,7 +753,19 @@ private:
 
     static std::string encodeSection(const std::string &section)
     {
-        return encodeKey(section);
+        std::string result;
+
+        size_t m = section.length();
+        for (size_t i = 0; i != m; ++i)
+        {
+            const char &ch = section[i];
+            if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.'))
+                result += ch;
+            else
+                result += std::string("%") + hex[ch / 16] + hex[ch % 16];
+        }
+
+        return result;
     }
 
     static std::string encodeKey(const std::string &key)
@@ -740,7 +776,7 @@ private:
         for (size_t i = 0; i != m; ++i)
         {
             const char &ch = key[i];
-            if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.'))
+            if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.') || (ch == '\\'))
                 result += ch;
             else
                 result += std::string("%") + hex[ch / 16] + hex[ch % 16];
@@ -808,7 +844,7 @@ private:
 
             case '\\':
             case '"':
-                result += "\\" + ch;
+                result += std::string("\\") + ch;
                 break;
 
             default:
@@ -817,11 +853,6 @@ private:
                 else
                     result += std::string("\\x") + hex[ch / 16] + hex[ch % 16];
             }
-
-            if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.'))
-                result += ch;
-            else
-                result += std::string("%") + hex[ch / 16] + hex[ch % 16];
         }
 
         if (result.find_first_of(" ;=,\"") != result.npos)
@@ -872,7 +903,7 @@ private:
             return CHAR_CLASS__MINUS;
 
         default:
-            if (((input >= '0') && (input <= '9')) || ((input >= 'A') && (input <= 'F')) || ((input >= 'a') && (input <= 'a')))
+            if (((input >= '0') && (input <= '9')) || ((input >= 'A') && (input <= 'F')) || ((input >= 'a') && (input <= 'f')))
                 return CHAR_CLASS__HEXDIGIT;
             else if (((input >= 'G') && (input <= 'Z')) || ((input >= 'g') && (input <= 'z')))
                 return CHAR_CLASS__LETTERS;
@@ -899,7 +930,8 @@ private:
         std::string::size_type start = str.find_first_not_of(" \t");
         if (start == str.npos)
             return std::string();
-        return str.substr(start, str.find_last_not_of(" \t") - start + 1);
+        std::string::size_type end = str.find_last_not_of(" \t");
+        return str.substr(start, end - start + 1);
     }
 
 private:
@@ -918,10 +950,8 @@ Storage::Value::Value(const std::string &string)
     : std::vector<char>()
 {
     size_t m = string.length();
-    reserve(m);
-    memcpy(&*begin(), string.c_str(), m);
-//    for (size_t i = 0; i < m; ++i)
-//        push_back(string[i]);
+    if (m)
+        assign(string.c_str(), string.c_str() + m);
 }
 
 Storage::Value::~Value()
@@ -932,10 +962,8 @@ Storage::Value& Storage::Value::operator = (const std::string &string)
 {
     clear();
     size_t m = string.length();
-    reserve(m);
-    memcpy(&*begin(), string.c_str(), m);
-//    for (size_t i = 0; i < m; ++i)
-//        push_back(string[i]);
+    if (m)
+        assign(string.c_str(), string.c_str() + m);
     return *this;
 }
 
@@ -993,10 +1021,10 @@ Storage::~Storage()
 bool                             Storage::parse           (const std::string &text, Callback *callback)                                               { return impl->parse           (text, callback); }
 std::string                      Storage::generate        ()                                                                                     const { return impl->generate        (); }
 void                             Storage::clear           ()                                                                                           {        impl->clear           (); }
-std::set<std::string>            Storage::get_all_sections()                                                                                     const { return impl->get_all_sections(); }
+Storage::Strings                 Storage::get_all_sections()                                                                                     const { return impl->get_all_sections(); }
 bool                             Storage::is_section_exist(const std::string &section)                                                           const { return impl->is_section_exist(section); }
 bool                             Storage::remove_section  (const std::string &section)                                                                 { return impl->remove_section  (section); }
-std::set<std::string>            Storage::get_all_keys    (const std::string &section)                                                           const { return impl->get_all_keys    (section); }
+Storage::Strings                 Storage::get_all_keys    (const std::string &section)                                                           const { return impl->get_all_keys    (section); }
 bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                         { return impl->is_key_exist    (section, key); }
 bool                             Storage::is_list         (const std::string &section, const std::string &key)                                         { return impl->is_list         (section, key); }
 std::pair<bool, std::string>     Storage::get_string      (const std::string &section, const std::string &key, const std::string &default_value) const { return impl->get_string      (section, key, default_value); }

@@ -56,15 +56,15 @@ public:
         virtual ~Callback()
         {}
 
-        virtual void error(size_t faulty_char, size_t faulty_line, size_t faulty_pos) = 0;
-        virtual void warning(ParseWarning type, size_t faulty_char, size_t faulty_line, size_t faulty_pos) = 0;
+        virtual void error(size_t faulty_pos, size_t faulty_line, size_t faulty_char) = 0;
+        virtual void warning(ParseWarning type, size_t faulty_pos, size_t faulty_line, size_t faulty_char) = 0;
     };
 
     class C_Callback : public Callback
     {
     public:
-        typedef void (*ErrorFunction)(size_t faulty_char, size_t faulty_line, size_t faulty_pos);
-        typedef void (*WarningFunction)(ParseWarning type, size_t faulty_char, size_t faulty_line, size_t faulty_pos);
+        typedef void (*ErrorFunction)(size_t faulty_pos, size_t faulty_line, size_t faulty_char);
+        typedef void (*WarningFunction)(ParseWarning type, size_t faulty_pos, size_t faulty_line, size_t faulty_char);
 
     public:
         C_Callback(ErrorFunction error_function = 0, WarningFunction warning_function = 0)
@@ -76,16 +76,16 @@ public:
         virtual ~C_Callback()
         {}
 
-        virtual void error(size_t faulty_char, size_t faulty_line, size_t faulty_pos)
+        virtual void error(size_t faulty_pos, size_t faulty_line, size_t faulty_char)
         {
             if (m_error)
-                m_error(faulty_char, faulty_line, faulty_pos);
+                m_error(faulty_pos, faulty_line, faulty_char);
         }
 
-        virtual void warning(ParseWarning type, size_t faulty_char, size_t faulty_line, size_t faulty_pos)
+        virtual void warning(ParseWarning type, size_t faulty_pos, size_t faulty_line, size_t faulty_char)
         {
             if (m_warning)
-                m_warning(type, faulty_char, faulty_line, faulty_pos);
+                m_warning(type, faulty_pos, faulty_line, faulty_char);
         }
 
     private:
@@ -119,6 +119,8 @@ public:
         Values& operator += (const Value &);
     };
 
+    typedef std::set<std::string> Strings;
+
 public:
     Storage();
     ~Storage();
@@ -138,14 +140,14 @@ public:
 
     void clear();
 
-    std::set<std::string> get_all_sections() const;
+    Strings get_all_sections() const;
 
     bool is_section_exist(const std::string &section) const;
 
     /// returns false is the section did not exist
     bool remove_section(const std::string &section);
 
-    std::set<std::string> get_all_keys(const std::string &section) const;
+    Strings get_all_keys(const std::string &section) const;
 
     bool is_key_exist(const std::string &section, const std::string &key);
 
