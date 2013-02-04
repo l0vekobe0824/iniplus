@@ -27,6 +27,7 @@
 
 #include "storage.hpp"
 
+#include <cstring>
 #include <map>
 
 
