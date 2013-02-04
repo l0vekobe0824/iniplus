@@ -34,7 +34,7 @@
 #include <utility>
 
 
-namespace ini {
+namespace inixx {
 
 class StorageImpl;
 

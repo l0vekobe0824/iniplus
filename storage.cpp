@@ -30,7 +30,7 @@
 #include <map>
 
 
-namespace ini {
+namespace inixx {
 
 class StorageImpl
 {
@@ -80,9 +80,11 @@ private:
     typedef std::map<std::string, Keys> Sections;
 
 public:
-    StorageImpl();
+    StorageImpl()
+    {}
 
-    ~StorageImpl();
+    ~StorageImpl()
+    {}
 
     bool parse(const std::string &text, Storage::Callback *callback)
     {
