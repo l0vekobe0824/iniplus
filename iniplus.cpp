@@ -25,13 +25,13 @@
 *************/
 
 
-#include "storage.hpp"
+#include "iniplus.hpp"
 
 #include <cstring>
 #include <map>
 
 
-namespace inixx {
+namespace iniplus {
 
 class StorageImpl
 {

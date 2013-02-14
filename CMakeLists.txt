@@ -1,4 +1,4 @@
-project(inixx)
+project(iniplus)
 
 cmake_minimum_required(VERSION 2.6)
 
@@ -23,7 +23,7 @@ endif()
 if(CMAKE_BUILD_TYPE MATCHES [Dd]ebug)
 	message(STATUS "Debug build")
 	add_definitions(-DDEBUG)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 else()
 	message(STATUS "Release build")
 	add_definitions(-DNDEBUG)
@@ -32,15 +32,11 @@ endif()
 
 
 set(${PROJECT_NAME}_SOURCES
-	storage.cpp
-)
-
-set(${PROJECT_NAME}_MAIN_HEADER
-	${PROJECT_NAME}_global.hpp
+	iniplus.cpp
 )
 
 set(${PROJECT_NAME}_PUBLIC_HEADERS
-	storage.hpp
+	iniplus.hpp
 )
 
 set(${PROJECT_NAME}_PRIVATE_HEADERS
@@ -60,7 +56,7 @@ set(${PROJECT_NAME}_ALL_FILES
 )
 
 
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_ALL_FILES})
+add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_ALL_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${FULL_VERSION})
 
 configure_file(
@@ -69,12 +65,8 @@ configure_file(
 	@ONLY
 )
 
-file(COPY ${${PROJECT_NAME}_MAIN_HEADER} DESTINATION "${PROJECT_BINARY_DIR}/")
-file(RENAME "${PROJECT_BINARY_DIR}/${${PROJECT_NAME}_MAIN_HEADER}" "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hpp")
-
 install(TARGETS ${PROJECT_NAME} DESTINATION lib COMPONENT runtime)
-install(FILES ${${PROJECT_NAME}_PUBLIC_HEADERS} DESTINATION include/${PROJECT_NAME} COMPONENT development)
-install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hpp" DESTINATION include COMPONENT development)
+install(FILES ${${PROJECT_NAME}_PUBLIC_HEADERS} DESTINATION include COMPONENT development)
 install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION lib/pkgconfig COMPONENT development)
 
 

@@ -24,8 +24,8 @@
 **
 *************/
 
-#ifndef INIXX__STORAGE__INCLUDED
-#define INIXX__STORAGE__INCLUDED
+#ifndef INIPLUS__INCLUDED
+#define INIPLUS__INCLUDED
 
 
 #include <set>
@@ -34,7 +34,7 @@
 #include <utility>
 
 
-namespace inixx {
+namespace iniplus {
 
 class StorageImpl;
 
@@ -169,4 +169,4 @@ private:
 
 }
 
-#endif // INIXX__STORAGE__INCLUDED
+#endif // INIPLUS__INCLUDED
