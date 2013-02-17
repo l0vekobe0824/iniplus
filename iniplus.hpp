@@ -104,7 +104,7 @@ public:
 
         Value& operator += (const char &);
 
-        operator std::string();
+        operator std::string() const;
 
         bool contains_binary(void) const;
     };
@@ -153,9 +153,10 @@ public:
 
     Strings get_all_keys(const std::string &section) const;
 
-    bool is_key_exist(const std::string &section, const std::string &key);
+    bool is_key_exist(const std::string &section, const std::string &key) const;
 
-    bool is_list(const std::string &section, const std::string &key);
+    bool is_list(const std::string &section, const std::string &key) const;
+
     bool contains_binary(const std::string &section, const std::string &key) const;
 
     /// returns pair of success flag and the value, success is false if the key did not exist and the default_value used as the returned value

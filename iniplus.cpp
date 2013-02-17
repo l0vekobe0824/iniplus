@@ -665,7 +665,7 @@ public:
         return result;
     }
 
-    bool is_key_exist(const std::string &section, const std::string &key)
+    bool is_key_exist(const std::string &section, const std::string &key) const
     {
         Sections::const_iterator SI = m_content.find(section);
         if (SI != m_content.end())
@@ -674,7 +674,7 @@ public:
         return false;
     }
 
-    bool is_list(const std::string &section, const std::string &key)
+    bool is_list(const std::string &section, const std::string &key) const
     {
         Sections::const_iterator SI = m_content.find(section);
         if (SI != m_content.end())
@@ -987,7 +987,7 @@ Storage::Value& Storage::Value::operator += (const char &value)
     return *this;
 }
 
-Storage::Value::operator std::string()
+Storage::Value::operator std::string() const
 {
     return std::string(&*begin(), size());
 }
@@ -1062,8 +1062,8 @@ Storage::Strings                 Storage::get_all_sections()                    
 bool                             Storage::is_section_exist(const std::string &section)                                                           const { return impl->is_section_exist(section); }
 bool                             Storage::remove_section  (const std::string &section)                                                                 { return impl->remove_section  (section); }
 Storage::Strings                 Storage::get_all_keys    (const std::string &section)                                                           const { return impl->get_all_keys    (section); }
-bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                         { return impl->is_key_exist    (section, key); }
-bool                             Storage::is_list         (const std::string &section, const std::string &key)                                         { return impl->is_list         (section, key); }
+bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                   const { return impl->is_key_exist    (section, key); }
+bool                             Storage::is_list         (const std::string &section, const std::string &key)                                   const { return impl->is_list         (section, key); }
 bool                             Storage::contains_binary (const std::string &section, const std::string &key)                                   const { return impl->contains_binary (section, key); }
 std::pair<bool, std::string>     Storage::get_string      (const std::string &section, const std::string &key, const std::string &default_value) const { return impl->get_string      (section, key, default_value); }
 std::pair<bool, Storage::Values> Storage::get_values      (const std::string &section, const std::string &key, const Values &default_values)     const { return impl->get_values      (section, key, default_values); }
