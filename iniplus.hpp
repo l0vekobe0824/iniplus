@@ -105,6 +105,8 @@ public:
         Value& operator += (const char &);
 
         operator std::string();
+
+        bool contains_binary(void) const;
     };
 
     class Values : public std::vector<Value>
@@ -117,6 +119,8 @@ public:
         Values& operator = (const Value &);
 
         Values& operator += (const Value &);
+
+        bool contains_binary(void) const;
     };
 
     typedef std::set<std::string> Strings;
@@ -152,6 +156,7 @@ public:
     bool is_key_exist(const std::string &section, const std::string &key);
 
     bool is_list(const std::string &section, const std::string &key);
+    bool contains_binary(const std::string &section, const std::string &key) const;
 
     /// returns pair of success flag and the value, success is false if the key did not exist and the default_value used as the returned value
     std::pair<bool, std::string> get_string(const std::string &section, const std::string &key, const std::string &default_string = std::string()) const;

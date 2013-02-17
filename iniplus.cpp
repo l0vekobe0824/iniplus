@@ -29,6 +29,7 @@
 
 #include <cstring>
 #include <map>
+#include <algorithm>
 
 
 namespace iniplus {
@@ -686,6 +687,19 @@ public:
         return false;
     }
 
+    bool contains_binary(const std::string &section, const std::string &key) const
+    {
+        Sections::const_iterator SI = m_content.find(section);
+        if (SI != m_content.end())
+        {
+            Keys::const_iterator KI = SI->second.find(key);
+            if (KI != SI->second.end())
+                return KI->second.contains_binary();
+        }
+
+        return false;
+    }
+
     std::pair<bool, std::string> get_string(const std::string &section, const std::string &key, const std::string &default_value) const
     {
         Storage::Values default_values;
@@ -978,6 +992,19 @@ Storage::Value::operator std::string()
     return std::string(&*begin(), size());
 }
 
+static bool is_binary(char ch)
+{
+    return (ch < ' ') || (ch >= '\x7f');
+}
+
+bool Storage::Value::contains_binary(void) const
+{
+    if (std::find_if(begin(), end(), &is_binary) != end())
+        return true;
+
+    return false;
+}
+
 
 Storage::Values::Values()
     : std::vector<Storage::Value>()
@@ -1007,6 +1034,16 @@ Storage::Values& Storage::Values::operator += (const Storage::Value &value)
     return *this;
 }
 
+bool Storage::Values::contains_binary(void) const
+{
+    size_t m = size();
+    for (size_t i = 0; i < m; ++i)
+        if (at(i).contains_binary())
+            return true;
+
+    return false;
+}
+
 
 Storage::Storage() :
     impl(new StorageImpl())
@@ -1027,6 +1064,7 @@ bool                             Storage::remove_section  (const std::string &se
 Storage::Strings                 Storage::get_all_keys    (const std::string &section)                                                           const { return impl->get_all_keys    (section); }
 bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                         { return impl->is_key_exist    (section, key); }
 bool                             Storage::is_list         (const std::string &section, const std::string &key)                                         { return impl->is_list         (section, key); }
+bool                             Storage::contains_binary (const std::string &section, const std::string &key)                                   const { return impl->contains_binary (section, key); }
 std::pair<bool, std::string>     Storage::get_string      (const std::string &section, const std::string &key, const std::string &default_value) const { return impl->get_string      (section, key, default_value); }
 std::pair<bool, Storage::Values> Storage::get_values      (const std::string &section, const std::string &key, const Values &default_values)     const { return impl->get_values      (section, key, default_values); }
 void                             Storage::set_string      (const std::string &section, const std::string &key, const std::string &value)               {        impl->set_string      (section, key, value); }
