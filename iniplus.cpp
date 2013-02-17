@@ -121,453 +121,475 @@ public:
 
             bool fail = false;
 
-            switch (context)
+            bool step_back = false;
+            do
             {
-            case CONTEXT__NEWLINE:
-                current_key.clear();
-                switch (char_class)
+                step_back = false;
+
+                switch (context)
                 {
-                case CHAR_CLASS__NEWLINE:
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__SEMICOLON:
-                    context = CONTEXT__COMMENT;
-                    break;
-
-                case CHAR_CLASS__OPENBRACKET:
-                    current_section.clear();
-                    context = CONTEXT__SECTION_START;
-                    break;
-
-                case CHAR_CLASS__HEXDIGIT:
-                case CHAR_CLASS__LETTERS:
-                case CHAR_CLASS__MINUS:
-                    current_key += input;
-                    context = CONTEXT__KEY_NAME;
-                    break;
-
-                case CHAR_CLASS__PERCENT:
-                    context = CONTEXT__KEY_HEX1;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__COMMENT:
-                switch (char_class)
-                {
-                case CHAR_CLASS__NEWLINE:
-                    context = CONTEXT__NEWLINE;
-                    break;
-
-                default:;
-                }
-                break;
-
-            case CONTEXT__SECTION_START:
-                switch (char_class)
-                {
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__HEXDIGIT:
-                case CHAR_CLASS__LETTERS:
-                case CHAR_CLASS__MINUS:
-                    current_section += input;
-                    context = CONTEXT__SECTION_NAME;
-                    break;
-
-                case CHAR_CLASS__PERCENT:
-                    context = CONTEXT__SECTION_HEX1;
-                    break;
-
-                case CHAR_CLASS__CLOSEBRACKET:
-                    context = CONTEXT__SECTION_CLOSE;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__SECTION_NAME:
-                switch (char_class)
-                {
-                case CHAR_CLASS__SPACE:
-                    context = CONTEXT__SECTION_END;
-                    break;
-
-                case CHAR_CLASS__HEXDIGIT:
-                case CHAR_CLASS__LETTERS:
-                case CHAR_CLASS__MINUS:
-                    current_section += input;
-                    break;
-
-                case CHAR_CLASS__PERCENT:
-                    context = CONTEXT__SECTION_HEX1;
-                    break;
-
-                case CHAR_CLASS__CLOSEBRACKET:
-                    context = CONTEXT__SECTION_CLOSE;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__SECTION_HEX1:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_section += char_to_hex(input) << 4;
-                    context = CONTEXT__SECTION_HEX2;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__SECTION_HEX2:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_section[current_section.length() - 1] |= char_to_hex(input);
-                    if (!current_section[current_section.length() - 1])
-                        if (callback)
-                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_SECTION_NAME, cur_pos - 2, cur_line, cur_char - 2);
-                    context = CONTEXT__SECTION_NAME;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__SECTION_END:
-                switch (char_class)
-                {
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__CLOSEBRACKET:
-                    context = CONTEXT__SECTION_CLOSE;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__SECTION_CLOSE:
-                switch (char_class)
-                {
-                case CHAR_CLASS__NEWLINE:
-                    context = CONTEXT__NEWLINE;
-                    break;
-
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__SEMICOLON:
-                    context = CONTEXT__COMMENT;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__KEY_NAME:
-                switch (char_class)
-                {
-                case CHAR_CLASS__SPACE:
-                    context = CONTEXT__KEY_END;
-                    break;
-
-                case CHAR_CLASS__HEXDIGIT:
-                case CHAR_CLASS__LETTERS:
-                case CHAR_CLASS__MINUS:
-                case CHAR_CLASS__BACKSLASH:
-                    current_key += input;
-                    break;
-
-                case CHAR_CLASS__PERCENT:
-                    context = CONTEXT__KEY_HEX1;
-                    break;
-
-                case CHAR_CLASS__EQUAL:
-                    current_values.clear();
-                    current_value.clear();
-                    context = CONTEXT__EQUAL;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__KEY_HEX1:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_key += char_to_hex(input) << 4;
-                    context = CONTEXT__KEY_HEX2;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__KEY_HEX2:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_key[current_key.length() - 1] |= char_to_hex(input);
-                    if (!current_key[current_key.length() - 1])
-                        if (callback)
-                            callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_KEY_NAME, cur_pos - 2, cur_line, cur_char - 2);
-                    context = CONTEXT__KEY_NAME;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__KEY_END:
-                switch (char_class)
-                {
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__EQUAL:
-                    current_values.clear();
-                    current_value.clear();
-                    context = CONTEXT__EQUAL;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__EQUAL:
-                switch (char_class)
-                {
-                case CHAR_CLASS__NEWLINE:
-                    current_values += current_value;
-                    current_value.clear();
-                    set_values(current_section, current_key, current_values);
-                    context = CONTEXT__NEWLINE;
-                    break;
-
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__SEMICOLON:
-                    context = CONTEXT__COMMENT;
-                    break;
-
-                case CHAR_CLASS__QUOTE:
-                    context = CONTEXT__VALUE_QUOTED;
-                    break;
-
-                case CHAR_CLASS__BACKSLASH:
-                    last_context = CONTEXT__VALUE_START;
-                    context = CONTEXT__VALUE_ESCAPED;
-                    break;
-
-                case CHAR_CLASS__COMMA:
-                    current_values += trim(current_value);
-                    current_value.clear();
-                    context = CONTEXT__EQUAL;
-                    break;
-
-                default:
-                    if ((input >= 0x20) && (input < 0x7f))
+                case CONTEXT__NEWLINE:
+                    current_key.clear();
+                    switch (char_class)
                     {
-                        current_value += input;
-                        context = CONTEXT__VALUE_START;
+                    case CHAR_CLASS__NEWLINE:
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__SEMICOLON:
+                        context = CONTEXT__COMMENT;
+                        break;
+
+                    case CHAR_CLASS__OPENBRACKET:
+                        current_section.clear();
+                        context = CONTEXT__SECTION_START;
+                        break;
+
+                    case CHAR_CLASS__HEXDIGIT:
+                    case CHAR_CLASS__LETTERS:
+                    case CHAR_CLASS__MINUS:
+                        current_key += input;
+                        context = CONTEXT__KEY_NAME;
+                        break;
+
+                    case CHAR_CLASS__PERCENT:
+                        context = CONTEXT__KEY_HEX1;
+                        break;
+
+                    default:
+                        fail = true;
                     }
-                    else
+                    break;
+
+                case CONTEXT__COMMENT:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__NEWLINE:
+                        context = CONTEXT__NEWLINE;
+                        break;
+
+                    default:;
+                    }
+                    break;
+
+                case CONTEXT__SECTION_START:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__HEXDIGIT:
+                    case CHAR_CLASS__LETTERS:
+                    case CHAR_CLASS__MINUS:
+                        current_section += input;
+                        context = CONTEXT__SECTION_NAME;
+                        break;
+
+                    case CHAR_CLASS__PERCENT:
+                        context = CONTEXT__SECTION_HEX1;
+                        break;
+
+                    case CHAR_CLASS__CLOSEBRACKET:
+                        context = CONTEXT__SECTION_CLOSE;
+                        break;
+
+                    default:
                         fail = true;
-                }
-                break;
-
-            case CONTEXT__VALUE_QUOTED:
-                switch (char_class)
-                {
-                case CHAR_CLASS__QUOTE:
-                    current_values += current_value;
-                    current_value.clear();
-                    context = CONTEXT__VALUE_END;
+                    }
                     break;
 
-                case CHAR_CLASS__BACKSLASH:
-                    last_context = context;
-                    context = CONTEXT__VALUE_ESCAPED;
+                case CONTEXT__SECTION_NAME:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__SPACE:
+                        context = CONTEXT__SECTION_END;
+                        break;
+
+                    case CHAR_CLASS__HEXDIGIT:
+                    case CHAR_CLASS__LETTERS:
+                    case CHAR_CLASS__MINUS:
+                        current_section += input;
+                        break;
+
+                    case CHAR_CLASS__PERCENT:
+                        context = CONTEXT__SECTION_HEX1;
+                        break;
+
+                    case CHAR_CLASS__CLOSEBRACKET:
+                        context = CONTEXT__SECTION_CLOSE;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
                     break;
 
-                default:
-                    if ((input >= 0x20) && (input < 0x7f))
+                case CONTEXT__SECTION_HEX1:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_section += char_to_hex(input) << 4;
+                        context = CONTEXT__SECTION_HEX2;
+                        break;
+
+                    default:
+                        current_section += input;
+                        context = CONTEXT__SECTION_NAME;
+                        step_back = true;
+//                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__SECTION_HEX2:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_section[current_section.length() - 1] |= char_to_hex(input);
+                        if (!current_section[current_section.length() - 1])
+                            if (callback)
+                                callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_SECTION_NAME, cur_pos - 2, cur_line, cur_char - 2);
+                        context = CONTEXT__SECTION_NAME;
+                        break;
+
+                    default:
+                        current_section[current_section.size() - 1] >>= 4;
+                        context = CONTEXT__SECTION_NAME;
+                        step_back = true;
+//                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__SECTION_END:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__CLOSEBRACKET:
+                        context = CONTEXT__SECTION_CLOSE;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__SECTION_CLOSE:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__NEWLINE:
+                        context = CONTEXT__NEWLINE;
+                        break;
+
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__SEMICOLON:
+                        context = CONTEXT__COMMENT;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__KEY_NAME:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__SPACE:
+                        context = CONTEXT__KEY_END;
+                        break;
+
+                    case CHAR_CLASS__HEXDIGIT:
+                    case CHAR_CLASS__LETTERS:
+                    case CHAR_CLASS__MINUS:
+                    case CHAR_CLASS__BACKSLASH:
+                        current_key += input;
+                        break;
+
+                    case CHAR_CLASS__PERCENT:
+                        context = CONTEXT__KEY_HEX1;
+                        break;
+
+                    case CHAR_CLASS__EQUAL:
+                        current_values.clear();
+                        current_value.clear();
+                        context = CONTEXT__EQUAL;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__KEY_HEX1:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_key += char_to_hex(input) << 4;
+                        context = CONTEXT__KEY_HEX2;
+                        break;
+
+                    default:
+                        current_key += input;
+                        context = CONTEXT__KEY_NAME;
+                        step_back = true;
+//                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__KEY_HEX2:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_key[current_key.length() - 1] |= char_to_hex(input);
+                        if (!current_key[current_key.length() - 1])
+                            if (callback)
+                                callback->warning(Storage::PARSE_WARNING__BINARY_ZERO_IN_KEY_NAME, cur_pos - 2, cur_line, cur_char - 2);
+                        context = CONTEXT__KEY_NAME;
+                        break;
+
+                    default:
+                        current_key[current_key.size() - 1] >>= 4;
+                        context = CONTEXT__KEY_NAME;
+                        step_back = true;
+//                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__KEY_END:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__EQUAL:
+                        current_values.clear();
+                        current_value.clear();
+                        context = CONTEXT__EQUAL;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__EQUAL:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__NEWLINE:
+                        current_values += current_value;
+                        current_value.clear();
+                        set_values(current_section, current_key, current_values);
+                        context = CONTEXT__NEWLINE;
+                        break;
+
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__SEMICOLON:
+                        context = CONTEXT__COMMENT;
+                        break;
+
+                    case CHAR_CLASS__QUOTE:
+                        context = CONTEXT__VALUE_QUOTED;
+                        break;
+
+                    case CHAR_CLASS__BACKSLASH:
+                        last_context = CONTEXT__VALUE_START;
+                        context = CONTEXT__VALUE_ESCAPED;
+                        break;
+
+                    case CHAR_CLASS__COMMA:
+                        current_values += trim(current_value);
+                        current_value.clear();
+                        context = CONTEXT__EQUAL;
+                        break;
+
+                    default:
+                        if ((input >= 0x20) && (input < 0x7f))
+                        {
+                            current_value += input;
+                            context = CONTEXT__VALUE_START;
+                        }
+                        else
+                            fail = true;
+                    }
+                    break;
+
+                case CONTEXT__VALUE_QUOTED:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__QUOTE:
+                        current_values += current_value;
+                        current_value.clear();
+                        context = CONTEXT__VALUE_END;
+                        break;
+
+                    case CHAR_CLASS__BACKSLASH:
+                        last_context = context;
+                        context = CONTEXT__VALUE_ESCAPED;
+                        break;
+
+                    default:
+                        if ((input >= 0x20) && (input < 0x7f))
+                            current_value += input;
+                        else
+                            fail = true;
+                    }
+                    break;
+
+                case CONTEXT__VALUE_START:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__NEWLINE:
+                        current_values += trim(current_value);
+                        current_value.clear();
+                        set_values(current_section, current_key, current_values);
+                        context = CONTEXT__NEWLINE;
+                        break;
+
+                    case CHAR_CLASS__SPACE:
                         current_value += input;
-                    else
-                        fail = true;
-                }
-                break;
+                        break;
 
-            case CONTEXT__VALUE_START:
-                switch (char_class)
-                {
-                case CHAR_CLASS__NEWLINE:
-                    current_values += trim(current_value);
-                    current_value.clear();
-                    set_values(current_section, current_key, current_values);
-                    context = CONTEXT__NEWLINE;
+                    case CHAR_CLASS__SEMICOLON:
+                        context = CONTEXT__COMMENT;
+                        break;
+
+                    case CHAR_CLASS__BACKSLASH:
+                        last_context = context;
+                        context = CONTEXT__VALUE_ESCAPED;
+                        break;
+
+                    case CHAR_CLASS__COMMA:
+                        current_values += trim(current_value);
+                        current_value.clear();
+                        context = CONTEXT__EQUAL;
+                        break;
+
+                    default:
+                        if ((input >= 0x20) && (input < 0x7f))
+                            current_value += input;
+                        else
+                            fail = true;
+                    }
                     break;
 
-                case CHAR_CLASS__SPACE:
-                    current_value += input;
-                    break;
+                case CONTEXT__VALUE_ESCAPED:
+                    switch (input) // !! INPUT, NOT CLASS
+                    {
+                    case '0':
+                        current_value += '\0';
+                        context = last_context;
+                        break;
 
-                case CHAR_CLASS__SEMICOLON:
-                    context = CONTEXT__COMMENT;
-                    break;
+                    case 'a':
+                        current_value += '\a';
+                        context = last_context;
+                        break;
 
-                case CHAR_CLASS__BACKSLASH:
-                    last_context = context;
-                    context = CONTEXT__VALUE_ESCAPED;
-                    break;
+                    case 'b':
+                        current_value += '\b';
+                        context = last_context;
+                        break;
 
-                case CHAR_CLASS__COMMA:
-                    current_values += trim(current_value);
-                    current_value.clear();
-                    context = CONTEXT__EQUAL;
-                    break;
+                    case 'f':
+                        current_value += '\f';
+                        context = last_context;
+                        break;
 
-                default:
-                    if ((input >= 0x20) && (input < 0x7f))
+                    case 'n':
+                        current_value += '\n';
+                        context = last_context;
+                        break;
+
+                    case 'r':
+                        current_value += '\r';
+                        context = last_context;
+                        break;
+
+                    case 't':
+                        current_value += '\t';
+                        context = last_context;
+                        break;
+
+                    case 'v':
+                        current_value += '\v';
+                        context = last_context;
+                        break;
+
+                    case '"':
+                    case '\\':
                         current_value += input;
-                    else
+                        context = last_context;
+                        break;
+
+                    case 'x':
+                        context = CONTEXT__VALUE_HEX1;
+                        break;
+
+                    default:
                         fail = true;
+                    }
+                    break;
+
+                case CONTEXT__VALUE_HEX1:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_value += char_to_hex(input) << 4;
+                        context = CONTEXT__VALUE_HEX2;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__VALUE_HEX2:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__HEXDIGIT:
+                        current_value[current_value.size() - 1] |= char_to_hex(input);
+                        context = last_context;
+                        break;
+
+                    default:
+                        current_value[current_value.size() - 1] >>= 4;
+                        context = last_context;
+                        step_back = true;
+//                        fail = true;
+                    }
+                    break;
+
+                case CONTEXT__VALUE_END:
+                    switch (char_class)
+                    {
+                    case CHAR_CLASS__NEWLINE:
+                        set_values(current_section, current_key, current_values);
+                        context = CONTEXT__NEWLINE;
+                        break;
+
+                    case CHAR_CLASS__SPACE:
+                        break;
+
+                    case CHAR_CLASS__SEMICOLON:
+                        set_values(current_section, current_key, current_values);
+                        context = CONTEXT__COMMENT;
+                        break;
+
+                    case CHAR_CLASS__COMMA:
+                        context = CONTEXT__EQUAL;
+                        break;
+
+                    default:
+                        fail = true;
+                    }
+                    break;
                 }
-                break;
-
-            case CONTEXT__VALUE_ESCAPED:
-                switch (input) // !! INPUT, NOT CLASS
-                {
-                case '0':
-                    current_value += '\0';
-                    context = last_context;
-                    break;
-
-                case 'a':
-                    current_value += '\a';
-                    context = last_context;
-                    break;
-
-                case 'b':
-                    current_value += '\b';
-                    context = last_context;
-                    break;
-
-                case 'f':
-                    current_value += '\f';
-                    context = last_context;
-                    break;
-
-                case 'n':
-                    current_value += '\n';
-                    context = last_context;
-                    break;
-
-                case 'r':
-                    current_value += '\r';
-                    context = last_context;
-                    break;
-
-                case 't':
-                    current_value += '\t';
-                    context = last_context;
-                    break;
-
-                case 'v':
-                    current_value += '\v';
-                    context = last_context;
-                    break;
-
-                case '"':
-                case '\\':
-                    current_value += input;
-                    context = last_context;
-                    break;
-
-                case 'x':
-                    context = CONTEXT__VALUE_HEX1;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__VALUE_HEX1:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_value += char_to_hex(input) << 4;
-                    context = CONTEXT__VALUE_HEX2;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__VALUE_HEX2:
-                switch (char_class)
-                {
-                case CHAR_CLASS__HEXDIGIT:
-                    current_value[current_value.size() - 1] |= char_to_hex(input);
-                    context = last_context;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
-
-            case CONTEXT__VALUE_END:
-                switch (char_class)
-                {
-                case CHAR_CLASS__NEWLINE:
-                    set_values(current_section, current_key, current_values);
-                    context = CONTEXT__NEWLINE;
-                    break;
-
-                case CHAR_CLASS__SPACE:
-                    break;
-
-                case CHAR_CLASS__SEMICOLON:
-                    set_values(current_section, current_key, current_values);
-                    context = CONTEXT__COMMENT;
-                    break;
-
-                case CHAR_CLASS__COMMA:
-                    context = CONTEXT__EQUAL;
-                    break;
-
-                default:
-                    fail = true;
-                }
-                break;
             }
+            while (step_back);
 
             if (fail)
             {
