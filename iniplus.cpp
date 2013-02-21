@@ -672,6 +672,18 @@ public:
         return m_content.erase(section);
     }
 
+    bool rename_section(const std::string &section, const std::string &new_section)
+    {
+        if (!is_section_exist(section))
+            return false;
+        if (is_section_exist(new_section))
+            return false;
+
+        m_content[new_section] = m_content[section];
+
+        return m_content.erase(section);
+    }
+
     Storage::Strings get_all_keys(const std::string &section) const
     {
         Storage::Strings result;
@@ -784,8 +796,20 @@ public:
         return result;
     }
 
+    bool rename_key(const std::string &section, const std::string &key, const std::string &new_section, const std::string &new_key)
+    {
+        if (!is_key_exist(section, key))
+            return false;
+        if (is_key_exist(new_section, new_key))
+            return false;
+
+        set_values(new_section, new_key, get_values(section, key, Storage::Values()).second);
+
+        return remove_key(section, key);
+    }
+
 private:
-    static const char hex[];
+    static const char *hex;
 
     static std::string encodeSection(const std::string &section)
     {
@@ -798,7 +822,7 @@ private:
             if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.'))
                 result += ch;
             else
-                result += std::string("%") + hex[ch / 16] + hex[ch % 16];
+                result += std::string("%") + hex[static_cast<unsigned char>(ch) / 16] + hex[static_cast<unsigned char>(ch) % 16];
         }
 
         return result;
@@ -815,7 +839,7 @@ private:
             if (((ch >= '0') && (ch <= '9')) || ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || (ch == '_') || (ch == '-') || (ch == '.') || (ch == '\\'))
                 result += ch;
             else
-                result += std::string("%") + hex[ch / 16] + hex[ch % 16];
+                result += std::string("%") + hex[static_cast<unsigned char>(ch) / 16] + hex[static_cast<unsigned char>(ch) % 16];
         }
 
         return result;
@@ -887,11 +911,11 @@ private:
                 if ((ch >= 0x20) && (ch < 0x7f))
                     result += ch;
                 else
-                    result += std::string("\\x") + hex[ch / 16] + hex[ch % 16];
+                    result += std::string("\\x") + hex[static_cast<unsigned char>(ch) / 16] + hex[static_cast<unsigned char>(ch) % 16];
             }
         }
 
-        if (result.find_first_of(" ;=,\"") != result.npos)
+        if ((result.find_first_of(";=,\"") != result.npos) || ((result.length() > 0) && ((result[0] == ' ') || (result[result.length() - 1] == ' '))))
             result = std::string("\"") + result + "\"";
 
         return result;
@@ -974,7 +998,7 @@ private:
     Sections m_content;
 };
 
-const char StorageImpl::hex[] = "0123456789ABCDEF";
+const char *StorageImpl::hex = "0123456789ABCDEF";
 
 
 Storage::Value::Value()
@@ -1077,20 +1101,22 @@ Storage::~Storage()
     delete impl;
 }
 
-bool                             Storage::parse           (const std::string &text, Callback *callback)                                               { return impl->parse           (text, callback); }
-std::string                      Storage::generate        ()                                                                                     const { return impl->generate        (); }
-void                             Storage::clear           ()                                                                                           {        impl->clear           (); }
-Storage::Strings                 Storage::get_all_sections()                                                                                     const { return impl->get_all_sections(); }
-bool                             Storage::is_section_exist(const std::string &section)                                                           const { return impl->is_section_exist(section); }
-bool                             Storage::remove_section  (const std::string &section)                                                                 { return impl->remove_section  (section); }
-Storage::Strings                 Storage::get_all_keys    (const std::string &section)                                                           const { return impl->get_all_keys    (section); }
-bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                   const { return impl->is_key_exist    (section, key); }
-bool                             Storage::is_list         (const std::string &section, const std::string &key)                                   const { return impl->is_list         (section, key); }
-bool                             Storage::contains_binary (const std::string &section, const std::string &key)                                   const { return impl->contains_binary (section, key); }
-std::pair<bool, std::string>     Storage::get_string      (const std::string &section, const std::string &key, const std::string &default_value) const { return impl->get_string      (section, key, default_value); }
-std::pair<bool, Storage::Values> Storage::get_values      (const std::string &section, const std::string &key, const Values &default_values)     const { return impl->get_values      (section, key, default_values); }
-void                             Storage::set_string      (const std::string &section, const std::string &key, const std::string &value)               {        impl->set_string      (section, key, value); }
-void                             Storage::set_values      (const std::string &section, const std::string &key, const Values &values)                   {        impl->set_values      (section, key, values); }
-bool                             Storage::remove_key      (const std::string &section, const std::string &key)                                         { return impl->remove_key      (section, key); }
+bool                             Storage::parse           (const std::string &text, Callback *callback)                                                                          { return impl->parse           (text, callback); }
+std::string                      Storage::generate        ()                                                                                                               const { return impl->generate        (); }
+void                             Storage::clear           ()                                                                                                                     {        impl->clear           (); }
+Storage::Strings                 Storage::get_all_sections()                                                                                                               const { return impl->get_all_sections(); }
+bool                             Storage::is_section_exist(const std::string &section)                                                                                     const { return impl->is_section_exist(section); }
+bool                             Storage::remove_section  (const std::string &section)                                                                                           { return impl->remove_section  (section); }
+bool                             Storage::rename_section  (const std::string &section, const std::string &new_section)                                                           { return impl->rename_section  (section, new_section); }
+Storage::Strings                 Storage::get_all_keys    (const std::string &section)                                                                                     const { return impl->get_all_keys    (section); }
+bool                             Storage::is_key_exist    (const std::string &section, const std::string &key)                                                             const { return impl->is_key_exist    (section, key); }
+bool                             Storage::is_list         (const std::string &section, const std::string &key)                                                             const { return impl->is_list         (section, key); }
+bool                             Storage::contains_binary (const std::string &section, const std::string &key)                                                             const { return impl->contains_binary (section, key); }
+std::pair<bool, std::string>     Storage::get_string      (const std::string &section, const std::string &key, const std::string &default_value)                           const { return impl->get_string      (section, key, default_value); }
+std::pair<bool, Storage::Values> Storage::get_values      (const std::string &section, const std::string &key, const Values &default_values)                               const { return impl->get_values      (section, key, default_values); }
+void                             Storage::set_string      (const std::string &section, const std::string &key, const std::string &value)                                         {        impl->set_string      (section, key, value); }
+void                             Storage::set_values      (const std::string &section, const std::string &key, const Values &values)                                             {        impl->set_values      (section, key, values); }
+bool                             Storage::remove_key      (const std::string &section, const std::string &key)                                                                   { return impl->remove_key      (section, key); }
+bool                             Storage::rename_key      (const std::string &section, const std::string &key, const std::string &new_section, const std::string &new_key)       { return impl->rename_key      (section, key, new_section, new_key); }
 
 }

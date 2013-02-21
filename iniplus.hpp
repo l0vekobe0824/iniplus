@@ -151,6 +151,9 @@ public:
     /// returns false is the section did not exist
     bool remove_section(const std::string &section);
 
+    /// returns false is the section did not exist or new_section exists
+    bool rename_section(const std::string &section, const std::string &new_section);
+
     Strings get_all_keys(const std::string &section) const;
 
     bool is_key_exist(const std::string &section, const std::string &key) const;
@@ -166,8 +169,11 @@ public:
     void set_string(const std::string &section, const std::string &key, const std::string &string);
     void set_values(const std::string &section, const std::string &key, const Values &values);
 
-    /// returns false is the key did not exist
+    /// returns false is the section/key did not exist
     bool remove_key(const std::string &section, const std::string &key);
+
+    /// returns false is the section/key did not exist or new_section/new_key exists
+    bool rename_key(const std::string &section, const std::string &key, const std::string &new_section, const std::string &new_key);
 
 private:
     StorageImpl *impl;
